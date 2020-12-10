@@ -101,6 +101,7 @@ class MainMenu(cmd.Cmd):
 
         # parse/handle any passed command line arguments
         self.args = args
+
         # instantiate the agents, listeners, and stagers objects
         self.agents = agents.Agents(self, args=args)
         self.credentials = credentials.Credentials(self, args=args)
@@ -108,7 +109,8 @@ class MainMenu(cmd.Cmd):
         self.modules = modules.Modules(self, args=args)
         self.listeners = listeners.Listeners(self, args=args)
         self.resourceQueue = []
-        #A hashtable of autruns based on agent language
+
+        # A hashtable of autoruns based on agent language
         self.autoRuns = {}
 
         self.handle_args()
@@ -165,7 +167,7 @@ class MainMenu(cmd.Cmd):
         event_data = json.dumps({'signal': signal_data, 'sender': sender})
 
         # print any signal that indicates we should
-        if('print' in signal_data and signal_data['print']):
+        if 'print' in signal_data and signal_data['print']:
             print(helpers.color(signal_data['message']))
 
         # get a db cursor, log this event to the DB, then close the cursor
@@ -217,72 +219,76 @@ class MainMenu(cmd.Cmd):
     def handle_args(self):
         """
         Handle any passed arguments.
+        -s -stager list <stager name>
+        -l -listeners list <listener name>
         """
-	if self.args.resource:
-	    resourceFile = self.args.resource[0]
-	    self.do_resource(resourceFile)
 
-        if self.args.listener or self.args.stager:
-            # if we're displaying listeners/stagers or generating a stager
-            if self.args.listener:
-                if self.args.listener == 'list':
-                    messages.display_listeners(self.listeners.activeListeners)
-                    messages.display_listeners(self.listeners.get_inactive_listeners(), "Inactive")
+        if self.args.resource:
+            resourceFile = self.args.resource[0]
+            self.do_resource(resourceFile)
 
-                else:
-                    activeListeners = self.listeners.activeListeners
-                    targetListener = [l for l in activeListeners if self.args.listener in l[1]]
+            if self.args.listener or self.args.stager:
+                # if we're displaying listeners/stagers or generating a stager
+                if self.args.listener:
+                    if self.args.listener == 'list':
+                        messages.display_listeners(self.listeners.activeListeners)
+                        messages.display_listeners(self.listeners.get_inactive_listeners(), "Inactive")
 
-                    if targetListener:
-                        targetListener = targetListener[0]
-                        # messages.display_listener_database(targetListener)
-                        # TODO: reimplement this logic
                     else:
-                        print helpers.color("\n[!] No active listeners with name '%s'\n" % (self.args.listener))
+                        activeListeners = self.listeners.activeListeners
+                        targetListener = [l for l in activeListeners if self.args.listener in l[1]]
 
-            else:
-                if self.args.stager == 'list':
-                    print "\nStagers:\n"
-                    print "  Name             Description"
-                    print "  ----             -----------"
-                    for stagerName, stager in self.stagers.stagers.iteritems():
-                        print "  %s%s" % ('{0: <17}'.format(stagerName), stager.info['Description'])
-                    print "\n"
-                else:
-                    stagerName = self.args.stager
-                    try:
-                        targetStager = self.stagers.stagers[stagerName]
-                        menu = StagerMenu(self, stagerName)
-
-                        if self.args.stager_options:
-                            for option in self.args.stager_options:
-                                if '=' not in option:
-                                    print helpers.color("\n[!] Invalid option: '%s'" % (option))
-                                    print helpers.color("[!] Please use Option=Value format\n")
-                                    if self.conn:
-                                        self.conn.close()
-                                    sys.exit()
-
-                                # split the passed stager options by = and set the appropriate option
-                                optionName, optionValue = option.split('=')
-                                menu.do_set("%s %s" % (optionName, optionValue))
-
-                            # generate the stager
-                            menu.do_generate('')
-
+                        if targetListener:
+                            targetListener = targetListener[0]
+                            # messages.display_listener_database(targetListener)
+                            # TODO: reimplement this logic
                         else:
-                            messages.display_stager(targetStager)
+                            print helpers.color("\n[!] No active listeners with name '%s'\n" % self.args.listener)
 
-                    except Exception as e:
-                        print e
-                        print helpers.color("\n[!] No current stager with name '%s'\n" % (stagerName))
+                else:
+                    if self.args.stager == 'list':
+                        # TODO: so as messages.display_stagers
+                        print "\nStagers:\n"
+                        print "  Name             Description"
+                        print "  ----             -----------"
+                        for stagerName, stager in self.stagers.stagers.iteritems():
+                            print "  %s%s" % ('{0: <17}'.format(stagerName), stager.info['Description'])
+                        print "\n"
+                    else:
+                        # generating a stager
+                        stagerName = self.args.stager
+                        try:
+                            targetStager = self.stagers.stagers[stagerName]
+                            menu = StagerMenu(self, stagerName)
 
-            # shutdown the database connection object
-            if self.conn:
-                self.conn.close()
+                            if self.args.stager_options:
+                                for option in self.args.stager_options:
+                                    if '=' not in option:
+                                        print helpers.color("\n[!] Invalid option: '%s'" % option)
+                                        print helpers.color("[!] Please use Option=Value format\n")
+                                        if self.conn:
+                                            self.conn.close()
+                                        sys.exit()
 
-            sys.exit()
+                                    # split the passed stager options by = and set the appropriate option
+                                    optionName, optionValue = option.split('=')
+                                    menu.do_set("%s %s" % (optionName, optionValue))
 
+                                # generate the stager
+                                menu.do_generate('')
+
+                            else:
+                                messages.display_stager(targetStager)
+
+                        except Exception as e:
+                            print e
+                            print helpers.color("\n[!] No current stager with name '%s'\n" % (stagerName))
+
+                # shutdown the database connection object
+                if self.conn:
+                    self.conn.close()
+
+                sys.exit()
 
     def shutdown(self):
         """
@@ -358,11 +364,10 @@ class MainMenu(cmd.Cmd):
                     print "       " + helpers.color(str(num_listeners), "green") + " listeners currently active\n"
                     print "       " + helpers.color(str(num_agents), "green") + " agents currently active\n\n"
 
-		    if len(self.resourceQueue) > 0:
-	    		self.cmdqueue.append(self.resourceQueue.pop(0))
+                if len(self.resourceQueue) > 0:
+                    self.cmdqueue.append(self.resourceQueue.pop(0))
 
-                    cmd.Cmd.cmdloop(self)
-
+                cmd.Cmd.cmdloop(self)
 
             # handle those pesky ctrl+c's
             except KeyboardInterrupt as e:
@@ -472,42 +477,43 @@ class MainMenu(cmd.Cmd):
             raise Exception("[!] Error: the plugin specified does not exist in {}.".format(pluginPath))
 
     def postcmd(self, stop, line):
-	if len(self.resourceQueue) > 0:
-	    nextcmd = self.resourceQueue.pop(0)
-	    self.cmdqueue.append(nextcmd)
+        if len(self.resourceQueue) > 0:
+            nextcmd = self.resourceQueue.pop(0)
+            self.cmdqueue.append(nextcmd)
 
     def default(self, line):
-        "Default handler."
+        """Default handler."""
+        print('default method')
         pass
 
     def do_resource(self, arg):
-	"Read and execute a list of Empire commands from a file."
-	self.resourceQueue.extend(self.buildQueue(arg))
+        """Read and execute a list of Empire commands from a file."""
+        self.resourceQueue.extend(self.buildQueue(arg))
 
     def buildQueue(self, resourceFile, autoRun=False):
-	cmds = []
-	if os.path.isfile(resourceFile):
-	    with open(resourceFile, 'r') as f:
-		lines = []
-		lines.extend(f.read().splitlines())
-	else:
-	    raise Exception("[!] Error: The resource file specified \"%s\" does not exist" % resourceFile)
-	for lineFull in lines:
-	    line = lineFull.strip()
-	    #ignore lines that start with the comment symbol (#)
-	    if line.startswith("#"):
-		continue
-	    #read in another resource file
-	    elif line.startswith("resource "):
-		rf = line.split(' ')[1]
-		cmds.extend(self.buildQueue(rf, autoRun))
-	    #add noprompt option to execute without user confirmation
-	    elif autoRun and line == "execute":
-		cmds.append(line + " noprompt")
-	    else:
-		cmds.append(line)
+        cmds = []
+        if os.path.isfile(resourceFile):
+            with open(resourceFile, 'r') as f:
+                lines = []
+                lines.extend(f.read().splitlines())
+        else:
+            raise Exception("[!] Error: The resource file specified \"%s\" does not exist" % resourceFile)
+        for lineFull in lines:
+            line = lineFull.strip()
+            #ignore lines that start with the comment symbol (#)
+            if line.startswith("#"):
+                continue
+            #read in another resource file
+            elif line.startswith("resource "):
+                rf = line.split(' ')[1]
+                cmds.extend(self.buildQueue(rf, autoRun))
+            #add noprompt option to execute without user confirmation
+            elif autoRun and line == "execute":
+                cmds.append(line + " noprompt")
+            else:
+                cmds.append(line)
 
-	return cmds
+        return cmds
 
     def do_exit(self, line):
         "Exit Empire"
@@ -1111,9 +1117,9 @@ class SubMenu(cmd.Cmd):
         self.mainMenu = mainMenu
 
     def cmdloop(self):
-	if len(self.mainMenu.resourceQueue) > 0:
-	    self.cmdqueue.append(self.mainMenu.resourceQueue.pop(0))
-	cmd.Cmd.cmdloop(self)
+        if len(self.mainMenu.resourceQueue) > 0:
+            self.cmdqueue.append(self.mainMenu.resourceQueue.pop(0))
+        cmd.Cmd.cmdloop(self)
 
     def emptyline(self):
         pass
@@ -1146,8 +1152,8 @@ class SubMenu(cmd.Cmd):
         raise NavMain()
 
     def do_resource(self, arg):
-	"Read and execute a list of Empire commands from a file."
-	self.mainMenu.resourceQueue.extend(self.mainMenu.buildQueue(arg))
+        "Read and execute a list of Empire commands from a file."
+        self.mainMenu.resourceQueue.extend(self.mainMenu.buildQueue(arg))
 
     def do_exit(self, line):
         "Exit Empire."
@@ -1190,41 +1196,41 @@ class AgentsMenu(SubMenu):
         raise NavMain()
 
     def do_autorun(self, line):
-	"Read and execute a list of Empire commands from a file and execute on each new agent \"autorun <resource file> <agent language>\" e.g. \"autorun /root/ps.rc powershell\". Or clear any autorun setting with \"autorun clear\" and show current autorun settings with \"autorun show\""
-	line = line.strip()
+        "Read and execute a list of Empire commands from a file and execute on each new agent \"autorun <resource file> <agent language>\" e.g. \"autorun /root/ps.rc powershell\". Or clear any autorun setting with \"autorun clear\" and show current autorun settings with \"autorun show\""
+        line = line.strip()
         if not line:
-	    print helpers.color("[!] You must specify a resource file, show or clear. e.g. 'autorun /root/res.rc powershell' or 'autorun clear'")
-	    return
-	cmds = line.split(' ')
-	resourceFile = cmds[0]
-	language = None
+            print helpers.color("[!] You must specify a resource file, show or clear. e.g. 'autorun /root/res.rc powershell' or 'autorun clear'")
+            return
+        cmds = line.split(' ')
+        resourceFile = cmds[0]
+        language = None
         if len(cmds) > 1:
-	    language = cmds[1].lower()
-	elif not resourceFile == "show" and not resourceFile == "clear":
-	    print helpers.color("[!] You must specify the agent language to run this module on. e.g. 'autorun /root/res.rc powershell' or 'autorun /root/res.rc python'")
-	    return
-	#show the current autorun settings by language or all
-	if resourceFile == "show":
-	    if language:
-		if self.mainMenu.autoRuns.has_key(language):
-		    print self.mainMenu.autoRuns[language]
-		else:
-		    print "No autorun commands for language %s" % language
-	    else:
-	        print self.mainMenu.autoRuns
-	#clear autorun settings by language or all
-	elif resourceFile == "clear":
-	    if language and not language == "all":
-		if self.mainMenu.autoRuns.has_key(language):
-		    self.mainMenu.autoRuns.pop(language)
-		else:
-		    print "No autorun commands for language %s" % language
-	    else:
-		#clear all autoruns
-		self.mainMenu.autoRuns.clear()
-	#read in empire commands from the specified resource file
-	else:
-	    self.mainMenu.autoRuns[language] = self.mainMenu.buildQueue(resourceFile, True)
+            language = cmds[1].lower()
+        elif not resourceFile == "show" and not resourceFile == "clear":
+            print helpers.color("[!] You must specify the agent language to run this module on. e.g. 'autorun /root/res.rc powershell' or 'autorun /root/res.rc python'")
+            return
+        #show the current autorun settings by language or all
+        if resourceFile == "show":
+            if language:
+                if self.mainMenu.autoRuns.has_key(language):
+                    print self.mainMenu.autoRuns[language]
+                else:
+                    print "No autorun commands for language %s" % language
+            else:
+                print self.mainMenu.autoRuns
+        #clear autorun settings by language or all
+        elif resourceFile == "clear":
+            if language and not language == "all":
+                if self.mainMenu.autoRuns.has_key(language):
+                    self.mainMenu.autoRuns.pop(language)
+                else:
+                    print "No autorun commands for language %s" % language
+            else:
+                #clear all autoruns
+                self.mainMenu.autoRuns.clear()
+        #read in empire commands from the specified resource file
+        else:
+            self.mainMenu.autoRuns[language] = self.mainMenu.buildQueue(resourceFile, True)
 
 
     def do_list(self, line):
@@ -1768,14 +1774,14 @@ class AgentMenu(SubMenu):
 
         agentLanguage = mainMenu.agents.get_language_db(sessionID)
 
-	if agentLanguage.lower() == 'powershell':
-	    agent_menu = PowerShellAgentMenu(mainMenu, sessionID)
-	    agent_menu.cmdloop()
-	elif agentLanguage.lower() == 'python':
-	    agent_menu = PythonAgentMenu(mainMenu, sessionID)
-	    agent_menu.cmdloop()
-	else:
-	    print helpers.color("[!] Agent language %s not recognized." % (agentLanguage))
+        if agentLanguage.lower() == 'powershell':
+            agent_menu = PowerShellAgentMenu(mainMenu, sessionID)
+            agent_menu.cmdloop()
+        elif agentLanguage.lower() == 'python':
+            agent_menu = PythonAgentMenu(mainMenu, sessionID)
+            agent_menu.cmdloop()
+        else:
+            print helpers.color("[!] Agent language %s not recognized." % (agentLanguage))
 
 
 class PowerShellAgentMenu(SubMenu):
@@ -3968,7 +3974,7 @@ class ModuleMenu(SubMenu):
 
                     # check if the agent/module PowerShell versions are compatible
                     if moduleLangVersion > agentLangVersion:
-                        print helpers.color("[!] Error: module requires language version %s but agent running version %s" % (moduleLangVersion, agentPSVersion))
+                        print helpers.color("[!] Error: module requires language version %s but agent running version %s" % (moduleLangVersion, agentLangVersion))
                         return False
             except Exception as e:
                 print helpers.color("[!] Invalid module or agent language version: %s" % (e))
@@ -4083,7 +4089,7 @@ class ModuleMenu(SubMenu):
             if 'Agent' in self.module.options:
                 _agent = self.module.options['Agent']['Value']
 
-	        line = line.strip("*")
+            line = line.strip("*")
             module_menu = ModuleMenu(self.mainMenu, line, agent=_agent)
             module_menu.cmdloop()
 
@@ -4411,7 +4417,8 @@ class StagerMenu(SubMenu):
 
 
     def do_generate(self, line):
-        "Generate/execute the given Empire stager."
+        """Generate/execute the given Empire stager."""
+
         if not self.validate_options():
             return
 
@@ -4441,7 +4448,7 @@ class StagerMenu(SubMenu):
             if ".sh" in savePath:
                 os.chmod(savePath, 777)
 
-            print "\n" + helpers.color("[*] Stager output written out to: %s\n" % (savePath))
+            print "\n" + helpers.color("[*] Stager output written out to: %s\n" % savePath)
             # dispatch this event
             message = "[*] Generated stager"
             signal = json.dumps({
